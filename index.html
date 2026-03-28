@@ -307,45 +307,50 @@
             return pokemonData[randomIndex];
         }
 
-        function resetGame(changePokemon = true) {
-            clearInterval(timerInterval);
-            clearTimeout(gameTimeout);
-            
-            timeLeft = 30;
-            uiTimer.innerText = timeLeft;
-            currentNum1 = null;
-            currentNum2 = null;
-            
-            uiNum1.innerText = "?";
-            uiNum1.className = "num-box empty";
-            uiNum2.innerText = "?";
-            uiNum2.className = "num-box empty";
-            
-            // --- 重點修復：先暫停圖片的過渡動畫，避免閃現 ---
+function resetGame(changePokemon = true) {
+    clearInterval(timerInterval);
+    clearTimeout(gameTimeout);
+    
+    timeLeft = 30;
+    uiTimer.innerText = timeLeft;
+    currentNum1 = null;
+    currentNum2 = null;
+    
+    uiNum1.innerText = "?";
+    uiNum1.className = "num-box empty";
+    uiNum2.innerText = "?";
+    uiNum2.className = "num-box empty";
+    
+    // --- 修改點 1：換圖時，確保圖片還是處於隱藏狀態 ---
+    if (changePokemon) {
+        const newPoke = getRandomPokemon();
+        uiPokemon.src = newPoke.src;
+        uiNameZh.innerText = newPoke.zh;
+        uiNameEn.innerText = newPoke.en;
+        
+        // 關鍵：延遲一小段時間再把圖片「放出來」
+        // 這 100ms 是給瀏覽器換 src 的緩衝時間
+        setTimeout(() => {
             uiPokemon.style.transition = 'none';
-            
-            if (changePokemon) {
-                const newPoke = getRandomPokemon();
-                uiPokemon.src = newPoke.src;
-                uiNameZh.innerText = newPoke.zh;
-                uiNameEn.innerText = newPoke.en;
-            }
-            
-            // 瞬間移除縮小與反白的狀態
             uiPokemon.classList.remove('captured-white', 'captured-hide');
-            
-            // 強制瀏覽器重新渲染 (Force Reflow)，確認瞬間狀態已生效
-            void uiPokemon.offsetWidth;
-            
-            // --- 恢復過渡動畫，以便下次收服時能正常播放 ---
+            void uiPokemon.offsetWidth; // 強制重繪
             uiPokemon.style.transition = 'all 0.5s ease';
+        }, 100); 
 
-            uiMessage.style.display = 'none';
-            
-            isPlaying = true;
-            btnPause.innerText = "暫停遊戲 / Pause"; 
-            startTimer();
-        }
+    } else {
+        // 如果不需要換下一隻（例如重置時間），則直接顯示
+        uiPokemon.style.transition = 'none';
+        uiPokemon.classList.remove('captured-white', 'captured-hide');
+        void uiPokemon.offsetWidth;
+        uiPokemon.style.transition = 'all 0.5s ease';
+    }
+
+    uiMessage.style.display = 'none';
+    
+    isPlaying = true;
+    btnPause.innerText = "暫停遊戲 / Pause"; 
+    startTimer();
+}
 
         function startTimer() {
             clearInterval(timerInterval); 
