@@ -335,7 +335,7 @@ function resetGame(changePokemon = true) {
             uiPokemon.classList.remove('captured-white', 'captured-hide');
             void uiPokemon.offsetWidth; // 強制重繪
             uiPokemon.style.transition = 'all 0.5s ease';
-        }, 150); 
+        }, 190); 
 
     } else {
         // 如果不需要換下一隻（例如重置時間），則直接顯示
@@ -348,8 +348,7 @@ function resetGame(changePokemon = true) {
     uiMessage.style.display = 'none';
     
     isPlaying = true;
-    btnPause.innerText = "暫停遊戲 / Pause"; 
-    startTimer();
+    btnPause.innerText = "暫停遊戲 / Pause";
 }
 
         function startTimer() {
@@ -373,10 +372,15 @@ function resetGame(changePokemon = true) {
             soundScan.currentTime = 0;
             soundScan.play().catch(e => console.log("音效未載入"));
 
+            // 判斷是不是第一個數字
             if (currentNum1 === null) {
                 currentNum1 = num;
                 uiNum1.innerText = currentNum1;
                 uiNum1.className = "num-box filled";
+        
+                // --- 【新增這行】輸入第一個數字後，開始倒數計時！ ---
+                startTimer();
+
             } else if (currentNum2 === null) {
                 currentNum2 = num;
                 uiNum2.innerText = currentNum2;
@@ -428,12 +432,19 @@ function resetGame(changePokemon = true) {
 
         btnPause.addEventListener('click', () => {
             if (isPlaying) {
+                // 暫停遊戲
                 isPlaying = false;
                 clearInterval(timerInterval);
                 btnPause.innerText = "繼續遊戲 / Continue";
             } else {
+                // 繼續遊戲
                 isPlaying = true;
-                startTimer();
+        
+                // --- 【修改這裡】確認已經有第一個數字了，才繼續倒數 ---
+                if (currentNum1 !== null) {
+                    startTimer();
+                }
+        
                 btnPause.innerText = "暫停遊戲 / Pause";
             }
         });
