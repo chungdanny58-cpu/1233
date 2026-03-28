@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>寶可夢數字大冒險 / Pokémon Number Adventure</title>
+    <style>
+        /* UI 介面設計 */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: url('forestbackground.JPG');
+            background-size: cover;
+            background-position: center;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            font-family: 'Comic Sans MS', '微軟正黑體', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #top-bar {
+            margin-top: 3vh;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px 30px;
+            border-radius: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #d9534f;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center;
+            border: 3px solid #d9534f;
+        }
+
+        /* 遊戲區域：新增 name 區塊 */
+        #game-area {
+            flex-grow: 1;
+            display: grid;
+            grid-template-areas: 
+                "name"
+                "pokemon"
+                "message";
+            grid-template-rows: auto 1fr auto; 
+            align-items: center;
+            justify-items: center;
+            gap: 10px; 
+            width: 100%;
+        }
+
+        /* 寶可夢名牌設計 */
+        #pokemon-name {
+            grid-area: name;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.85);
+            padding: 10px 40px;
+            border-radius: 20px;
+            border: 4px solid #3b4cca; /* 寶可夢藍 */
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            margin-top: 10px;
+        }
+
+        #poke-name-zh {
+            font-size: 38px;
+            font-weight: bold;
+            color: #3b4cca;
+            margin: 0;
+        }
+
+        #poke-name-en {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffcb05; /* 寶可夢黃 */
+            -webkit-text-stroke: 1px #3b4cca; /* 英文加上藍色邊框更有卡通感 */
+            margin: 0;
+        }
+
+        #pokemon-img {
+            grid-area: pokemon;
+            max-height: 50vh; 
+            max-width: 90vw;  
+            transition: all 0.5s ease;
+        }
+
+        .captured-white { filter: brightness(0) invert(1); }
+        .captured-hide { transform: scale(0); opacity: 0; }
+
+        #message-overlay {
+            grid-area: message;
+            font-size: 30px;
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 4px 4px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+            display: none;
+            text-align: center;
+            background: rgba(0, 0, 0, 0.6);
+            padding: 10px 30px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+        }
+        #message-overlay p { margin: 5px 0; }
+
+        /* --- 大幅強化的算式板設計 --- */
+        #equation-board {
+            margin-bottom: 5vh;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 30px;
+            border-radius: 30px;
+            font-size: 80px; /* 加大符號 */
+            font-weight: bold;
+            color: #333;
+            border: 8px solid #ffcb05; /* 醒目的黃色外框 */
+            box-shadow: 0 0 25px rgba(255, 203, 5, 0.9), 0 8px 15px rgba(0,0,0,0.4);
+            text-align: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 15px; /* 數字與符號之間的間距 */
+        }
+
+        /* 讓小孩填數字的框框 */
+        .num-box {
+            display: inline-block;
+            min-width: 90px;
+            height: 100px;
+            line-height: 100px;
+            background-color: #fff;
+            border: 5px dashed #ccc;
+            border-radius: 20px;
+            color: #d9534f;
+            font-size: 80px;
+            text-align: center;
+            transition: all 0.3s;
+        }
+
+        /* 未填寫時的閃爍動畫，吸引注意力 */
+        @keyframes pulse-box {
+            0% { transform: scale(1); border-color: #ccc; box-shadow: 0 0 0 rgba(0,0,0,0); }
+            50% { transform: scale(1.08); border-color: #ff9900; background-color: #fff8e1; box-shadow: 0 0 15px rgba(255, 153, 0, 0.6); }
+            100% { transform: scale(1); border-color: #ccc; box-shadow: 0 0 0 rgba(0,0,0,0); }
+        }
+        .num-box.empty {
+            animation: pulse-box 1.5s infinite;
+        }
+
+        /* 填入數字後變成綠色確認狀態 */
+        .num-box.filled {
+            background-color: #e8f5e9;
+            border: 5px solid #4caf50;
+            color: #2e7d32;
+            animation: none; /* 停止閃爍 */
+            transform: scale(1);
+        }
+
+        #start-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            padding: 20px 40px;
+            font-size: 30px;
+            background-color: #f0ad4e;
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            z-index: 20;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+
+        #admin-controls {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            opacity: 0.1; 
+            transition: opacity 0.3s ease;
+            display: none; 
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        #admin-controls:hover { opacity: 1; }
+        .admin-btn {
+            display: block;
+            width: 100%;
+            margin-bottom: 5px;
+            padding: 5px 10px;
+            font-size: 14px;
+            background: #5bc0de;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .admin-btn:last-child { margin-bottom: 0; }
+    </style>
+</head>
+<body>
+
+    <audio id="bgm" src="你的背景音樂名稱.mp3" loop></audio>
+    <audio id="sound-success" src="收服成功音效.mp3"></audio>
+    <audio id="sound-fail" src="失敗音效.mp3"></audio>
+    <audio id="sound-scan" src="感應音效.mp3"></audio>
+
+    <button id="start-btn">
+        <p>開始遊戲 / Start Game</p>
+        <p>(啟動感應 / Enable NFC)</p>
+    </button>
+
+    <div id="top-bar">倒數 / Time: <span id="timer">30</span> 秒/s</div>
+    
+    <div id="game-area">
+        <div id="pokemon-name">
+            <p id="poke-name-zh">寶可夢名稱</p>
+            <p id="poke-name-en">Pokemon Name</p>
+        </div>
+        
+        <img id="pokemon-img" src="" alt="Pokemon">
+        
+        <div id="message-overlay">
+            <p id="msg-zh"></p>
+            <p id="msg-en"></p>
+        </div>
+    </div>
+
+    <div id="equation-board">
+        <div id="num1" class="num-box empty">?</div>
+        <span>+</span>
+        <div id="num2" class="num-box empty">?</div>
+        <span>= 10</span>
+    </div>
+
+    <div id="admin-controls">
+        <button class="admin-btn" id="btn-pause">暫停遊戲 / Pause</button>
+        <button class="admin-btn" id="btn-reset-time">重置時間 / Reset Time</button>
+        <button class="admin-btn" id="btn-reset-next">換下一隻 / Next</button>
+    </div>
+
+    <script>
+        const pokemonData = [
+            { src: 'bulbasaur.PNG', zh: '妙蛙種子', en: 'Bulbasaur' },
+            { src: 'caterpie.PNG', zh: '綠毛蟲', en: 'Caterpie' },
+            { src: 'charmander.PNG', zh: '小火龍', en: 'Charmander' },
+            { src: 'clefairy.PNG', zh: '皮皮', en: 'Clefairy' },
+            { src: 'diglett.PNG', zh: '地鼠', en: 'Diglett' },
+            { src: 'geodude.PNG', zh: '小拳石', en: 'Geodude' },
+            { src: 'jigglypuff.PNG', zh: '胖丁', en: 'Jigglypuff' },
+            { src: 'meowth.PNG', zh: '喵喵', en: 'Meowth' },
+            { src: 'oddish.PNG', zh: '走路草', en: 'Oddish' },
+            { src: 'palpitoad.PNG', zh: '藍蟾蜍', en: 'Palpitoad' },
+            { src: 'pikachu.PNG', zh: '皮卡丘', en: 'Pikachu' },
+            { src: 'psyduck.PNG', zh: '可達鴨', en: 'Psyduck' },
+            { src: 'slowpoke.PNG', zh: '呆呆獸', en: 'Slowpoke' },
+            { src: 'snorlax.PNG', zh: '卡比獸', en: 'Snorlax' },
+            { src: 'squirtle.PNG', zh: '傑尼龜', en: 'Squirtle' },
+            { src: 'vulpix.PNG', zh: '六尾', en: 'Vulpix' },
+            { src: 'wobbuffet.PNG', zh: '果然翁', en: 'Wobbuffet' }
+        ];
+
+        let recentPokemons = []; 
+
+        let currentNum1 = null;
+        let currentNum2 = null;
+        let timerInterval;
+        let gameTimeout; 
+        let timeLeft = 30;
+        let isPlaying = false;
+        let ndefReader = null;
+
+        const uiNum1 = document.getElementById('num1');
+        const uiNum2 = document.getElementById('num2');
+        const uiTimer = document.getElementById('timer');
+        const uiPokemon = document.getElementById('pokemon-img');
+        const uiNameZh = document.getElementById('poke-name-zh');
+        const uiNameEn = document.getElementById('poke-name-en');
+        const uiMessage = document.getElementById('message-overlay');
+        const uiMsgZh = document.getElementById('msg-zh');
+        const uiMsgEn = document.getElementById('msg-en');
+        const startBtn = document.getElementById('start-btn');
+        const adminControls = document.getElementById('admin-controls');
+        const btnPause = document.getElementById('btn-pause');
+        const btnResetTime = document.getElementById('btn-reset-time');
+        const btnResetNext = document.getElementById('btn-reset-next');
+        
+        const bgm = document.getElementById('bgm');
+        const soundSuccess = document.getElementById('sound-success');
+        const soundFail = document.getElementById('sound-fail');
+        const soundScan = document.getElementById('sound-scan');
+
+        function getRandomPokemon() {
+            let randomIndex;
+            do {
+                randomIndex = Math.floor(Math.random() * pokemonData.length);
+            } while (recentPokemons.includes(randomIndex));
+
+            recentPokemons.push(randomIndex);
+            
+            if (recentPokemons.length > 5) {
+                recentPokemons.shift();
+            }
+
+            return pokemonData[randomIndex];
+        }
+
+        function resetGame(changePokemon = true) {
+            clearInterval(timerInterval);
+            clearTimeout(gameTimeout);
+            
+            timeLeft = 30;
+            uiTimer.innerText = timeLeft;
+            currentNum1 = null;
+            currentNum2 = null;
+            
+            uiNum1.innerText = "?";
+            uiNum1.className = "num-box empty";
+            uiNum2.innerText = "?";
+            uiNum2.className = "num-box empty";
+            
+            // --- 重點修復：先暫停圖片的過渡動畫，避免閃現 ---
+            uiPokemon.style.transition = 'none';
+            
+            if (changePokemon) {
+                const newPoke = getRandomPokemon();
+                uiPokemon.src = newPoke.src;
+                uiNameZh.innerText = newPoke.zh;
+                uiNameEn.innerText = newPoke.en;
+            }
+            
+            // 瞬間移除縮小與反白的狀態
+            uiPokemon.classList.remove('captured-white', 'captured-hide');
+            
+            // 強制瀏覽器重新渲染 (Force Reflow)，確認瞬間狀態已生效
+            void uiPokemon.offsetWidth;
+            
+            // --- 恢復過渡動畫，以便下次收服時能正常播放 ---
+            uiPokemon.style.transition = 'all 0.5s ease';
+
+            uiMessage.style.display = 'none';
+            
+            isPlaying = true;
+            btnPause.innerText = "暫停遊戲 / Pause"; 
+            startTimer();
+        }
+
+        function startTimer() {
+            clearInterval(timerInterval); 
+            timerInterval = setInterval(() => {
+                if (!isPlaying) return; 
+                
+                timeLeft--;
+                uiTimer.innerText = timeLeft;
+                if (timeLeft <= 0) {
+                    gameOver(false); 
+                }
+            }, 1000);
+        }
+
+        function handleNumberInput(numString) {
+            if (!isPlaying) return;
+            const num = parseInt(numString.trim());
+            if (isNaN(num)) return; 
+
+            soundScan.currentTime = 0;
+            soundScan.play().catch(e => console.log("音效未載入"));
+
+            if (currentNum1 === null) {
+                currentNum1 = num;
+                uiNum1.innerText = currentNum1;
+                uiNum1.className = "num-box filled";
+            } else if (currentNum2 === null) {
+                currentNum2 = num;
+                uiNum2.innerText = currentNum2;
+                uiNum2.className = "num-box filled"; 
+                checkResult();
+            }
+        }
+
+        function checkResult() {
+            if (currentNum1 + currentNum2 === 10) {
+                gameOver(true);
+            } else {
+                gameOver(false);
+            }
+        }
+
+        function gameOver(isSuccess) {
+            isPlaying = false;
+            clearInterval(timerInterval); 
+
+            if (isSuccess) {
+                uiMsgZh.innerText = "收服成功！";
+                uiMsgEn.innerText = "Gotcha!";
+                uiMessage.style.color = "#FFD700"; 
+                uiMessage.style.display = "block";
+                soundSuccess.play().catch(e => console.log("音效未載入"));
+
+                uiPokemon.classList.add('captured-white');
+
+                gameTimeout = setTimeout(() => {
+                    uiPokemon.classList.add('captured-hide');
+                    gameTimeout = setTimeout(() => {
+                        resetGame(true); 
+                    }, 500);
+                }, 3000); 
+
+            } else {
+                uiMsgZh.innerText = "再加油！";
+                uiMsgEn.innerText = "Keep Trying!";
+                uiMessage.style.color = "#fff"; 
+                uiMessage.style.display = "block";
+                soundFail.play().catch(e => console.log("音效未載入"));
+
+                gameTimeout = setTimeout(() => {
+                    resetGame(false); 
+                }, 3000);
+            }
+        }
+
+        btnPause.addEventListener('click', () => {
+            if (isPlaying) {
+                isPlaying = false;
+                clearInterval(timerInterval);
+                btnPause.innerText = "繼續遊戲 / Continue";
+            } else {
+                isPlaying = true;
+                startTimer();
+                btnPause.innerText = "暫停遊戲 / Pause";
+            }
+        });
+
+        btnResetTime.addEventListener('click', () => resetGame(false));
+        btnResetNext.addEventListener('click', () => resetGame(true));
+
+        async function startNFC() {
+            try {
+                if ('NDEFReader' in window) {
+                    ndefReader = new NDEFReader();
+                    await ndefReader.scan();
+                    ndefReader.onreading = event => {
+                        const decoder = new TextDecoder();
+                        for (const record of event.message.records) {
+                            if (record.recordType === "text") {
+                                handleNumberInput(decoder.decode(record.data));
+                            }
+                        }
+                    };
+                } else {
+                    console.log("此設備不支援 Web NFC，請使用鍵盤測試。");
+                }
+            } catch (error) {
+                console.error("NFC 錯誤:", error);
+            }
+        }
+
+        startBtn.addEventListener('click', () => {
+            startBtn.style.display = 'none';
+            adminControls.style.display = 'block'; 
+            bgm.play().catch(e => console.log("BGM未載入"));
+            startNFC();
+            resetGame(true);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                handleNumberInput(e.key);
+            }
+        });
+
+    </script>
+</body>
+</html>
